@@ -1,0 +1,309 @@
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; }
+
+  #canvas-container {
+    width: 100%;
+    min-height: 100vh;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas#bg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0.4;
+  }
+
+  .content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    max-width: 600px;
+  }
+
+  .glitch-text {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(13px, 2vw, 16px);
+    color: rgba(255,255,255,0.15);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 60px;
+  }
+
+  .center-symbol {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 60px;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .center-symbol svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .center-symbol:hover .ring { animation-duration: 1s !important; }
+
+  .ring {
+    transform-origin: center;
+    animation: spin 8s linear infinite;
+  }
+  .ring2 {
+    transform-origin: center;
+    animation: spin 12s linear infinite reverse;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .pulse-dot {
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; r: 4; }
+    50% { opacity: 0.3; r: 6; }
+  }
+
+  .questions {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    margin-bottom: 60px;
+  }
+
+  .q-line {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(12px, 1.8vw, 14px);
+    color: rgba(255,255,255,0);
+    letter-spacing: 0.1em;
+    line-height: 1.8;
+    transition: color 0.8s ease;
+    cursor: default;
+  }
+
+  .q-line.visible {
+    color: rgba(255,255,255,0.6);
+  }
+
+  .q-line.highlight {
+    color: rgba(255,255,255,0.95);
+  }
+
+  .q-line span {
+    display: inline-block;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 2px;
+  }
+
+  .bottom-text {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.08);
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    margin-top: 20px;
+    animation: flicker 6s ease-in-out infinite;
+  }
+
+  @keyframes flicker {
+    0%, 90%, 100% { opacity: 1; }
+    92%, 96% { opacity: 0; }
+    94% { opacity: 0.5; }
+  }
+
+  .grid-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .scanline {
+    position: absolute;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    background: linear-gradient(transparent, rgba(255,255,255,0.03), transparent);
+    animation: scan 8s linear infinite;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  @keyframes scan {
+    from { top: -5%; }
+    to { top: 105%; }
+  }
+
+  .corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: rgba(255,255,255,0.2);
+    border-style: solid;
+  }
+  .corner.tl { top: 20px; left: 20px; border-width: 1px 0 0 1px; }
+  .corner.tr { top: 20px; right: 20px; border-width: 1px 1px 0 0; }
+  .corner.bl { bottom: 20px; left: 20px; border-width: 0 0 1px 1px; }
+  .corner.br { bottom: 20px; right: 20px; border-width: 0 1px 1px 0; }
+
+  .counter {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.1);
+    letter-spacing: 0.3em;
+    margin-bottom: 40px;
+    min-height: 16px;
+  }
+</style>
+
+<div id="canvas-container">
+  <div class="grid-overlay"></div>
+  <div class="scanline"></div>
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+
+  <canvas id="bg"></canvas>
+
+  <div class="content">
+    <div class="glitch-text" id="glitch">SIGNAL_DETECTED</div>
+
+    <div class="center-symbol" id="symbol" title="click">
+      <svg viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="58" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/>
+        <g class="ring">
+          <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" stroke-dasharray="4 8"/>
+        </g>
+        <g class="ring2">
+          <circle cx="60" cy="60" r="36" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="0.5" stroke-dasharray="2 12"/>
+        </g>
+        <circle cx="60" cy="60" r="20" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+        <circle cx="60" cy="60" r="4" fill="rgba(255,255,255,0.8)" class="pulse-dot"/>
+        <line x1="60" y1="20" x2="60" y2="40" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+        <line x1="60" y1="80" x2="60" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+        <line x1="20" y1="60" x2="40" y2="60" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+        <line x1="80" y1="60" x2="100" y2="60" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+      </svg>
+    </div>
+
+    <div class="questions" id="questions">
+      <div class="q-line" data-delay="0"><span>have you ever felt the rules were written for someone else?</span></div>
+      <div class="q-line" data-delay="1200"><span>have you noticed things repeat in ways they shouldn't?</span></div>
+      <div class="q-line" data-delay="2400"><span>do you choose not to — when you easily could?</span></div>
+      <div class="q-line" data-delay="3600"><span>does the world feel like it's waiting for something?</span></div>
+    </div>
+
+    <div class="counter" id="counter"></div>
+
+    <div class="bottom-text">if you know, you know</div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('bg');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let w, h;
+
+function resize() {
+  const container = document.getElementById('canvas-container');
+  w = canvas.width = container.offsetWidth;
+  h = canvas.height = container.offsetHeight;
+}
+
+function initParticles() {
+  particles = [];
+  for (let i = 0; i < 80; i++) {
+    particles.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      size: Math.random() * 1.5,
+      opacity: Math.random() * 0.5
+    });
+  }
+}
+
+function drawParticles() {
+  ctx.clearRect(0, 0, w, h);
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.x < 0) p.x = w;
+    if (p.x > w) p.x = 0;
+    if (p.y < 0) p.y = h;
+    if (p.y > h) p.y = 0;
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${p.opacity})`;
+    ctx.fill();
+  });
+
+  particles.forEach((p, i) => {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[j].x - p.x;
+      const dy = particles[j].y - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 100) {
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(255,255,255,${0.05 * (1 - dist/100)})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  });
+
+  requestAnimationFrame(drawParticles);
+}
+
+resize();
+initParticles();
+drawParticles();
+window.addEventListener('resize', () => { resize(); initParticles(); });
+
+const qs = document.querySelectorAll('.q-line');
+qs.forEach(q => {
+  const delay = parseInt(q.dataset.delay);
+  setTimeout(() => q.classList.add('visible'), 1000 + delay);
+});
+
+let clickCount = 0;
+const counter = document.getElementById('counter');
+const glitch = document.getElementById('glitch');
+const glitchTexts = ['SIGNAL_DETECTED', 'OBSERVER_ONLINE', 'PATTERN_FOUND', 'YOU_SEE_IT'];
+
+document.getElementById('symbol').addEventListener('click', () => {
+  clickCount++;
+  counter.textContent = `${String(clickCount).padStart(3,'0')} // observers`;
+
+  qs.forEach(q => q.classList.remove('highlight'));
+  const target = qs[Math.min(clickCount - 1, qs.length - 1)];
+  if (target) target.classList.add('highlight');
+
+  glitch.textContent = glitchTexts[Math.min(clickCount - 1, glitchTexts.length - 1)];
+});
+</script>
